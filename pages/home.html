@@ -1,0 +1,20 @@
+<div class="jumbotron text-center">
+  <h1>Home Page</h1>
+
+  <p>{{ message }}</p>
+  <div class="row">
+    <div class="col-lg-6">
+      <canvas id="line" class="chart chart-line" chart-data="weekly_stats_data"
+          chart-labels="weekly_stats_labels" chart-legend="true" chart-series="series"
+            chart-click="onClick" chart-options="percent_options">
+      </canvas>
+    </div>
+
+    <div class="col-lg-6">
+      <canvas id="line" class="chart chart-line" chart-data="hourly_stats_data"
+          chart-labels="hourly_stats_labels" chart-legend="true" chart-series="hourly_series"
+            chart-click="onClick" chart-options="percent_options">
+      </canvas>
+    </div>
+  </div>
+</div>
