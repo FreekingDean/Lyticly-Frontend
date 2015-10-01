@@ -1,8 +1,7 @@
 // script.js
 // create the module and name it lyticly
-var lyticly = angular.module('lyticly', []);
-
 var lyticly = angular.module('lyticly', ['ngRoute', 'chart.js']);
+var api_endpoint = "http://lyticly.appspot.com/"
 
 // configure our routes
 lyticly.config(function($routeProvider) {
@@ -53,15 +52,15 @@ lyticly.controller('mainController', function($scope, $http) {
       scaleStartValue : 0
   }
 
-  $http.get('http://localhost:8080/week-stats').then(function(data){
+  $http.get(api_endpoint + '/week-stats').then(function(data){
     data.data.forEach(function(row){
-      $scope.weekly_stats_data[0][row.weekday] = row.percent;
+      $scope.weekly_stats_data[0][row.weekday-1] = row.percent;
     });
   });
 
-  $http.get('http://localhost:8080/hourly-stats').then(function(data){
+  $http.get(api_endpoint + '/hourly-stats').then(function(data){
     data.data.forEach(function(row){
-      $scope.hourly_stats_data[row.weekday][row.hourofday] = row.percent;
+      $scope.hourly_stats_data[row.weekday-1][row.hourofday] = row.percent;
     });
   });
 
