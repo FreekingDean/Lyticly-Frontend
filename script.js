@@ -1,31 +1,103 @@
 // script.js
 // create the module and name it lyticly
 var lyticly = angular.module('lyticly', ['ngRoute', 'chart.js']);
-var api_endpoint = "http://lyticly.appspot.com/"
+var api_endpoint = "http://api.lyticly-dev.com/"
+//var authentication = AuthenticationController();
+//var api_endpoint = "http://lyticly.appspot.com/"
+
+//Factories
 
 // configure our routes
-lyticly.config(function($routeProvider) {
+lyticly.config(function($routeProvider, $httpProvider) {
   $routeProvider
-
-  // route for the home page
+  .when('/login', {
+    templateUrl : 'pages/login.html',
+    controller  : 'loginController'
+  })
   .when('/', {
     templateUrl : 'pages/home.html',
-    controller  : 'mainController'
-  })
-
-  // route for the about page
-  .when('/about', {
-    templateUrl : 'pages/about.html',
-    controller  : 'aboutController'
-  })
-
-  // route for the contact page
-  .when('/contact', {
-    templateUrl : 'pages/contact.html',
-    controller  : 'contactController'
+    controller  : 'mainController',
+    resolve     : {
+      auth: authentication.authFilter
+    }
   });
+
+  $httpProvider.defaults.withCredentials = true;
 });
 
+lyticly.factory("authService", ["$http","$q","$window",function ($http, $q, $window) {
+    var userInfo;
+
+    function login(userName, password) {
+        var deferred = $q.defer();
+
+        $http.post(api_endpoint+"login", { userName: userName, password: password })
+            .then(function (result) {
+                userInfo = result.success
+                $window.sessionStorage["userInfo"] = JSON.stringify(userInfo);
+                deferred.resolve(userInfo);
+            }, function (error) {
+                deferred.reject(error);
+            });
+
+        return deferred.promise;
+    }
+
+    function logout() {
+        var deferred = $q.defer();
+
+        $http({
+            method: "DELETE",
+            url: api_endpoint+"logout",
+        }).then(function (result) {
+            userInfo = null;
+            $window.sessionStorage["userInfo"] = null;
+            deferred.resolve(result);
+        }, function (error) {
+            deferred.reject(error);
+        });
+
+        return deferred.promise;
+    }
+
+    function getUserInfo() {
+        return userInfo;
+    }
+
+    function init() {
+        if ($window.sessionStorage["userInfo"]) {
+            //userInfo = JSON.parse($window.sessionStorage["userInfo"]);
+        }
+    }
+    init();
+
+    return {
+        login: login,
+        logout: logout,
+        getUserInfo: getUserInfo
+    };
+}]);
+
+function AuthenticationController() {
+  function authenticate($q, authService) {
+    var userInfo = authService.getUserInfo();
+
+    if (userInfo) {
+      return $q.when(userInfo);
+    } else {
+      return $q.reject({ authenticated: false });
+    }
+  }
+
+  return {
+    authFilter: [
+      "$q",
+      "authService",
+      authenticate
+    ]
+  }
+}
+authentication = AuthenticationController();
 // create the controller and inject Angular's $scope
 lyticly.controller('mainController', function($scope, $http) {
   // create a message to display in our view
@@ -71,10 +143,38 @@ lyticly.controller('mainController', function($scope, $http) {
   $scope.message = 'Everyone come and see how good I look!';
 });
 
-lyticly.controller('aboutController', function($scope) {
-  $scope.message = 'Look! I am an about page.';
-});
+lyticly.controller("loginController", ["$scope", "$location", "$window", "authService",function ($scope, $location, $window, authService) {
+    $scope.userInfo = null;
+    $scope.login = function () {
+        authService.login($scope.userName, $scope.password)
+            .then(function (result) {
+                $scope.userInfo = result;
+                $location.path("/");
+            }, function (error) {
+                $window.alert("Invalid credentials");
+                console.log(error);
+            });
+    };
+
+    $scope.cancel = function () {
+        $scope.userName = "";
+        $scope.password = "";
+    };
+}]);
 
 lyticly.controller('contactController', function($scope) {
   $scope.message = 'Contact us! JK. This is just a demo.';
 });
+
+lyticly.run(["$rootScope", "$location", function($rootScope, $location) {
+  $rootScope.$on("$routeChangeSuccess", function(userInfo) {
+    console.log(userInfo);
+  });
+
+  $rootScope.$on("$routeChangeError", function(event, current, previous, eventObj) {
+    if (eventObj.authenticated === false) {
+      console.log("not logged in");
+      $location.path("/login");
+    }
+  });
+}]);
